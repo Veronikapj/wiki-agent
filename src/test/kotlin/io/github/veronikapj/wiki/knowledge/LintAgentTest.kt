@@ -1,6 +1,7 @@
 package io.github.veronikapj.wiki.knowledge
 
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -18,9 +19,9 @@ class LintAgentTest {
     @AfterEach fun cleanup() { File(baseDir).deleteRecursively() }
 
     @Test fun `lint returns no issues when store is empty`() = runBlocking {
-        coEvery { llmFn(any()) } returns "이슈 없음"
         val result = agent.lint()
-        assertTrue(result.contains("이슈") || result.isEmpty() || result.contains("없음"))
+        assertTrue(result.contains("이슈") || result.contains("없음"))
+        coVerify(exactly = 0) { llmFn(any()) }
     }
 
     @Test fun `lint includes page content in llm prompt`() = runBlocking {
@@ -42,5 +43,14 @@ class LintAgentTest {
         val result = agent.lint()
 
         assertTrue(result.contains("모순") || result.contains("A 페이지"))
+    }
+
+    @Test fun `lint returns error string when llm throws`() = runBlocking {
+        store.savePage("concepts/a.md", "# A\n내용")
+        coEvery { llmFn(any()) } throws RuntimeException("timeout")
+
+        val result = agent.lint()
+
+        assertTrue(result.contains("오류") || result.contains("timeout"))
     }
 }

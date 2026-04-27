@@ -16,6 +16,11 @@ class LintAgent(
             "## $path\n$content"
         }
 
+        val contentStr = allContent.take(8000)
+        val truncationNotice = if (allContent.length > 8000)
+            "\n[주의: 콘텐츠가 8000자로 잘렸습니다. 일부 페이지가 분석에서 제외됐을 수 있습니다.]"
+        else ""
+
         val prompt = buildString {
             appendLine("당신은 위키 품질 검사 전문가입니다. 아래 지식베이스 페이지들을 분석하세요.")
             appendLine()
@@ -29,11 +34,13 @@ class LintAgent(
             appendLine("이슈가 없으면 '이슈 없음'으로 답하세요.")
             appendLine()
             appendLine("페이지 목록:")
-            appendLine(allContent.take(8000))
+            appendLine(contentStr)
+            if (truncationNotice.isNotEmpty()) appendLine(truncationNotice)
         }
 
         val result = runCatching { llmFn(prompt) }.getOrElse { e ->
             log.error("Lint LLM failed", e)
+            store.appendLog("lint-error", "LLM 실패 — ${e.message}")
             return "Lint LLM 오류: ${e.message}"
         }
 
