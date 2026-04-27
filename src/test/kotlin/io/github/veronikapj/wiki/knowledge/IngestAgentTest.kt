@@ -34,10 +34,12 @@ class IngestAgentTest {
     }
 
     @Test fun `ingest detects duplicate URL via sources dir`() = runBlocking {
-        store.savePage("sources/example-com.md", "url: https://example.com\n날짜: 2024-01")
+        val url = "https://example.com"
+        val key = agent.urlToSourceKey(url)
+        store.savePage("sources/$key.md", "url: $url\n날짜: 2024-01")
         coEvery { llmFn(any()) } returns "PAGES:\n"
 
-        val result = agent.ingestUrl("https://example.com")
+        val result = agent.ingestUrl(url)
 
         assertTrue(result.contains("이미 등록") || result.contains("duplicate"))
     }

@@ -13,8 +13,14 @@ class IngestAgent(
     private val chromaIndexFn: (suspend (String, String, String) -> Unit)? = null,
 ) {
     private val httpClient = HttpClient(CIO) {
-        install(HttpTimeout) { requestTimeoutMillis = 15_000 }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 15_000
+            connectTimeoutMillis = 10_000
+            socketTimeoutMillis = 15_000
+        }
     }
+
+    fun close() = httpClient.close()
 
     suspend fun ingestUrl(url: String): String {
         // 중복 감지: sources/ 디렉터리의 url: 필드 확인
@@ -130,7 +136,7 @@ class IngestAgent(
             .trim()
     }
 
-    private fun urlToSourceKey(url: String): String =
+    internal fun urlToSourceKey(url: String): String =
         url.removePrefix("https://").removePrefix("http://")
             .replace(Regex("[^a-zA-Z0-9가-힣]"), "-")
             .take(80)
