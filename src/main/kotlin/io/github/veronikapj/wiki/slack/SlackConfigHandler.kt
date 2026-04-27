@@ -14,6 +14,8 @@ class SlackConfigHandler(
     private val configPath: String = ".wikiq/config.yml",
     private val persistOnChange: Boolean = false,
     private val onReindex: (suspend () -> Int)? = null,
+    private val onIngest: (suspend (String) -> String)? = null,
+    private val onLint: (suspend () -> String)? = null,
     private val projectMemory: ProjectMemory? = null,
     private val asyncExecutor: Executor = Executor { r -> Thread(r).also { it.isDaemon = true }.start() },
 ) {
@@ -36,6 +38,9 @@ class SlackConfigHandler(
                 reindexStatus()
             parts.size >= 2 && parts[1] == "reindex" ->
                 triggerReindex()
+            parts.size >= 3 && parts[1] == "ingest" -> triggerIngest(parts[2])
+            parts.size >= 2 && parts[1] == "ingest" -> "사용법: /wiki ingest <URL>"
+            parts.size >= 2 && parts[1] == "lint" -> triggerLint()
             else -> helpMessage()
         }
     }
@@ -54,6 +59,27 @@ class SlackConfigHandler(
             }
         }
         return ":hourglass_flowing_sand: 인덱싱을 시작했습니다. `/wiki reindex status`로 진행 상황을 확인하세요."
+    }
+
+    private fun triggerIngest(url: String): String {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return "유효하지 않은 URL입니다. http:// 또는 https://로 시작해야 합니다."
+        }
+        val fn = onIngest ?: return "Ingest 기능이 비활성화 상태입니다."
+        asyncExecutor.execute {
+            runCatching { runBlocking { fn(url) } }
+                .onFailure { e -> log.error("Ingest failed: {}", url, e) }
+        }
+        return ":hourglass_flowing_sand: ingest를 시작했습니다: $url"
+    }
+
+    private fun triggerLint(): String {
+        val fn = onLint ?: return "Lint 기능이 비활성화 상태입니다."
+        asyncExecutor.execute {
+            runCatching { runBlocking { fn() } }
+                .onFailure { e -> log.error("Lint failed", e) }
+        }
+        return ":hourglass_flowing_sand: lint 검사를 시작했습니다."
     }
 
     private fun reindexStatus(): String {
@@ -111,6 +137,10 @@ class SlackConfigHandler(
         • `/wiki memory add <내용>` — 프로젝트 정보 저장 (도메인 용어, 팀 정보 등)
         • `/wiki memory show` — 저장된 프로젝트 정보 확인
         • `/wiki memory clear` — 프로젝트 정보 초기화
+
+        :books: *지식베이스*
+        • `/wiki ingest <URL>` — URL을 지식베이스에 ingest
+        • `/wiki lint` — 지식베이스 품질 검사
 
         :bulb: *도움말*
         • `@wiki 도움말` 또는 `/wiki help`

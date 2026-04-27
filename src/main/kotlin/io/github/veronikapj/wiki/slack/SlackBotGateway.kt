@@ -9,6 +9,7 @@ import io.github.veronikapj.wiki.agent.SearchProgressListener
 import io.github.veronikapj.wiki.config.SlackConfig
 import io.github.veronikapj.wiki.confluence.ConfluenceClient
 import io.github.veronikapj.wiki.context.ProjectMemory
+import io.github.veronikapj.wiki.knowledge.IngestAgent
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -18,12 +19,21 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
+enum class DmInputType { URL, LONG_TEXT, NORMAL }
+
+internal fun classifyDmInput(text: String): DmInputType = when {
+    text.startsWith("http://") || text.startsWith("https://") -> DmInputType.URL
+    text.length >= 500 -> DmInputType.LONG_TEXT
+    else -> DmInputType.NORMAL
+}
+
 class SlackBotGateway(
     private val slackConfig: SlackConfig,
     private val orchestrator: OrchestratorAgent,
     private val configHandler: SlackConfigHandler,
     private val projectMemory: ProjectMemory? = null,
     private val confluenceClient: ConfluenceClient? = null,
+    private val ingestAgent: IngestAgent? = null,
 ) {
     private val app = App()
     private val slackClient: MethodsClient = Slack.getInstance().methods(slackConfig.botToken)
@@ -33,6 +43,7 @@ class SlackBotGateway(
     )
 
     private val toolDisplayNames = mapOf(
+        "knowledgeSearch" to "지식베이스",
         "confluenceSearch" to "Confluence",
         "githubWikiSearch" to "GitHub Wiki",
         "vectorSearch" to "RAG",
@@ -232,8 +243,39 @@ class SlackBotGateway(
             if (isOnboarding(channel)) {
                 runCatching { handleOnboarding(channel, null, query) }
                     .onFailure { log.error("Onboarding error: {}", it.message, it) }
-            } else if (!handleQueryAsync(channel = channel, threadTs = null, sessionId = "dm-$channel", query = query)) {
-                slackClient.chatPostMessage { it.channel(channel).text("요청이 많아 잠시 후 다시 시도해주세요.") }
+            } else {
+                when (classifyDmInput(query)) {
+                    DmInputType.URL -> {
+                        val ingest = ingestAgent
+                        if (ingest != null) {
+                            messageExecutor.submit {
+                                runCatching {
+                                    val result = runBlocking { ingest.ingestUrl(query) }
+                                    slackClient.chatPostMessage { it.channel(channel).text(result) }
+                                }.onFailure { e ->
+                                    log.error("Ingest URL failed: {}", e.message, e)
+                                    slackClient.chatPostMessage { it.channel(channel).text("URL ingest 실패: ${e.message}") }
+                                }
+                            }
+                        } else {
+                            if (!handleQueryAsync(channel = channel, threadTs = null, sessionId = "dm-$channel", query = query)) {
+                                slackClient.chatPostMessage { it.channel(channel).text("요청이 많아 잠시 후 다시 시도해주세요.") }
+                            }
+                        }
+                    }
+                    DmInputType.LONG_TEXT -> {
+                        // ingestText()는 /wiki ingest 커맨드 또는 향후 확인 흐름에서 사용 예정
+                        // 현재는 URL 기반 ingest 안내만 제공
+                        slackClient.chatPostMessage {
+                            it.channel(channel).text("긴 텍스트를 감지했습니다. `/wiki ingest <URL>` 명령어로 URL을 지식베이스에 저장할 수 있습니다.")
+                        }
+                    }
+                    DmInputType.NORMAL -> {
+                        if (!handleQueryAsync(channel = channel, threadTs = null, sessionId = "dm-$channel", query = query)) {
+                            slackClient.chatPostMessage { it.channel(channel).text("요청이 많아 잠시 후 다시 시도해주세요.") }
+                        }
+                    }
+                }
             }
             ctx.ack()
         }

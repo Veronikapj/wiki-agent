@@ -45,4 +45,21 @@ class SlackBotGatewayTest {
         assertTrue("thumbsup" in reactions)
         assertTrue("thumbsdown" in reactions)
     }
+
+    @Test
+    fun `classifyDmInput detects URL`() {
+        assertEquals(DmInputType.URL, classifyDmInput("https://example.com/page"))
+        assertEquals(DmInputType.URL, classifyDmInput("http://blog.example.com"))
+    }
+
+    @Test
+    fun `classifyDmInput detects long text`() {
+        val longText = "가".repeat(500)
+        assertEquals(DmInputType.LONG_TEXT, classifyDmInput(longText))
+    }
+
+    @Test
+    fun `classifyDmInput returns NORMAL for short text`() {
+        assertEquals(DmInputType.NORMAL, classifyDmInput("배포 절차가 뭐야?"))
+    }
 }

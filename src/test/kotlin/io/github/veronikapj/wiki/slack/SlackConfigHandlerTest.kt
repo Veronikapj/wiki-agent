@@ -95,4 +95,37 @@ class SlackConfigHandlerTest {
         assertTrue(result.contains("초기화"))
         assertNull(memory.load())
     }
+
+    @Test
+    fun `handle ingest URL triggers async ingest`() {
+        var ingestedUrl: String? = null
+        val handler = SlackConfigHandler(
+            config = makeConfig(),
+            asyncExecutor = { r -> r.run() },
+            onIngest = { url -> ingestedUrl = url; ":white_check_mark: 저장 완료" },
+        )
+        val result = handler.handle("/wiki ingest https://example.com/page")
+        assertTrue(result.contains("ingest") || result.contains("시작"))
+        assertEquals("https://example.com/page", ingestedUrl)
+    }
+
+    @Test
+    fun `handle ingest without URL returns usage message`() {
+        val handler = SlackConfigHandler(config = makeConfig())
+        val result = handler.handle("/wiki ingest")
+        assertTrue(result.contains("사용법") || result.contains("URL"))
+    }
+
+    @Test
+    fun `handle lint triggers async lint`() {
+        var lintCalled = false
+        val handler = SlackConfigHandler(
+            config = makeConfig(),
+            asyncExecutor = { r -> r.run() },
+            onLint = { lintCalled = true; "이슈 없음" },
+        )
+        val result = handler.handle("/wiki lint")
+        assertTrue(result.contains("lint") || result.contains("검사") || result.contains("시작"))
+        assertTrue(lintCalled)
+    }
 }
