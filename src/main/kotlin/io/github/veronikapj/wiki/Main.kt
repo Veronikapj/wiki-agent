@@ -11,6 +11,10 @@ import io.github.veronikapj.wiki.agent.tool.ConfluenceTool
 import io.github.veronikapj.wiki.agent.tool.GitHubWikiTool
 import io.github.veronikapj.wiki.agent.tool.SourceTracker
 import io.github.veronikapj.wiki.agent.tool.VectorSearchTool
+import io.github.veronikapj.wiki.knowledge.IngestAgent
+import io.github.veronikapj.wiki.knowledge.KnowledgeStore
+import io.github.veronikapj.wiki.knowledge.KnowledgeTool
+import io.github.veronikapj.wiki.knowledge.LintAgent
 import io.github.veronikapj.wiki.config.ConfigLoader
 import io.github.veronikapj.wiki.context.ProjectMemory
 import io.github.veronikapj.wiki.config.EmbeddingMode
@@ -52,6 +56,28 @@ fun main() {
     val sourceTracker = SourceTracker()
     val conversationStore = ConversationStore()
     val projectMemory = ProjectMemory()
+
+    val knowledgeStore = KnowledgeStore()
+    val knowledgeLlmFn: suspend (String) -> String = { userPrompt ->
+        executor.execute(
+            prompt("knowledge") { user(userPrompt) }, model
+        ).joinToString("") { it.content }
+    }
+
+    // ChromaDB knowledge collection (separate from wiki-pages collection)
+    val knowledgeChromaFn: (suspend (String, String, String) -> Unit)? = if (config.rag.enabled) {
+        val kbChromaClient = ChromaClient(config.rag.chromaUrl)
+        val fn: suspend (String, String, String) -> Unit = { id, doc, _ ->
+            val collectionId = kbChromaClient.getOrCreateCollection("knowledge_base")
+            kbChromaClient.addDocuments(collectionId, listOf(id), listOf(doc))
+        }
+        fn
+    } else null
+
+    val ingestAgent = IngestAgent(knowledgeStore, knowledgeLlmFn, knowledgeChromaFn)
+    val lintAgent = LintAgent(knowledgeStore, knowledgeLlmFn)
+    val knowledgeTool = KnowledgeTool(knowledgeStore, sourceTracker)
+    log.info("Knowledge base initialized: dir=.wiki/knowledge/, chromaFn={}", if (knowledgeChromaFn != null) "enabled" else "disabled")
 
     var confluenceTool: ConfluenceTool? = null
     var confluenceClient: ConfluenceClient? = null
@@ -108,6 +134,7 @@ fun main() {
     }
 
     val orchestrator = OrchestratorAgent(
+        knowledgeTool = knowledgeTool,
         confluenceTool = confluenceTool,
         githubWikiTool = githubWikiTool,
         vectorSearchTool = vectorSearchTool,
@@ -125,6 +152,8 @@ fun main() {
             config = config,
             persistOnChange = true,
             onReindex = vectorIndexAgent?.let { agent -> { agent.indexAll() } },
+            onIngest = { url -> ingestAgent.ingestUrl(url) },
+            onLint = { lintAgent.lint() },
             projectMemory = projectMemory,
         )
         val gateway = SlackBotGateway(
@@ -133,6 +162,7 @@ fun main() {
             configHandler = configHandler,
             projectMemory = projectMemory,
             confluenceClient = confluenceClient,
+            ingestAgent = ingestAgent,
         )
         gateway.start()
     } else {
