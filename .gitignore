@@ -23,6 +23,9 @@ Thumbs.db
 # Project memory & sessions
 .wiki/
 
+# Local knowledge base (team-specific, not committed)
+.wiki/knowledge/
+
 # Runtime logs
 logs/*.log
 
