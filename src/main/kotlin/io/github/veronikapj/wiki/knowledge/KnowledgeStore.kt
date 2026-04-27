@@ -32,10 +32,10 @@ class KnowledgeStore(private val baseDir: String = ".wiki/knowledge") {
     }
 
     // Returns list of (relativePath, content) pairs for all .md pages except index.md and log.md
-    fun loadAll(): List<Pair<String, String>> {
+    fun loadAll(): List<Pair<String, String>> = lock.withLock {
         val root = File(baseDir)
-        if (!root.exists()) return emptyList()
-        return root.walkTopDown()
+        if (!root.exists()) return@withLock emptyList()
+        root.walkTopDown()
             .filter { it.isFile && it.extension == "md" }
             .filter { it.name != "index.md" && it.name != "log.md" }
             .map { file ->
@@ -44,13 +44,14 @@ class KnowledgeStore(private val baseDir: String = ".wiki/knowledge") {
             }.toList()
     }
 
-    fun pageExists(relativePath: String): Boolean =
+    fun pageExists(relativePath: String): Boolean = lock.withLock {
         File("$baseDir/$relativePath").exists()
+    }
 
     fun incrementAndGetIngestCount(): Int = ingestCount.incrementAndGet()
 
-    fun loadIndex(): String? {
+    fun loadIndex(): String? = lock.withLock {
         val f = File("$baseDir/index.md")
-        return if (f.exists()) f.readText() else null
+        if (f.exists()) f.readText() else null
     }
 }

@@ -57,4 +57,14 @@ class KnowledgeStoreTest {
         assertEquals(2, store.incrementAndGetIngestCount())
         assertEquals(3, store.incrementAndGetIngestCount())
     }
+
+    @Test fun `loadIndex returns null when no index exists`() {
+        assertNull(store.loadIndex())
+    }
+
+    @Test fun `loadIndex returns content after updateIndex`() {
+        store.updateIndex("concepts/a.md", "A")
+        assertNotNull(store.loadIndex())
+        assertTrue(store.loadIndex()!!.contains("concepts/a.md"))
+    }
 }
