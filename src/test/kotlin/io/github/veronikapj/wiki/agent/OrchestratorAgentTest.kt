@@ -68,4 +68,26 @@ class OrchestratorAgentTest {
             )
         }
     }
+
+    @Test
+    fun `knowledgeTool has highest search priority`() {
+        val baseDir = "build/test-orch-kb-${System.nanoTime()}"
+        val store = io.github.veronikapj.wiki.knowledge.KnowledgeStore(baseDir)
+        val knowledgeTool = io.github.veronikapj.wiki.knowledge.KnowledgeTool(store)
+
+        val confluenceAgent = mockk<ConfluenceSearchAgent>()
+        val confluenceTool = ConfluenceTool(confluenceAgent)
+
+        val agent = OrchestratorAgent(
+            knowledgeTool = knowledgeTool,
+            confluenceTool = confluenceTool,
+            executor = LLMExecutorBuilder.build(ModelConfig()),
+            useManualLoop = true,
+        )
+
+        val priorities = agent.toolPriorities()
+        kotlin.test.assertTrue(priorities.indexOf("knowledgeSearch") < priorities.indexOf("confluenceSearch"))
+
+        java.io.File(baseDir).deleteRecursively()
+    }
 }
