@@ -75,6 +75,10 @@ fun main() {
     } else null
 
     val ingestAgent = IngestAgent(knowledgeStore, knowledgeLlmFn, knowledgeChromaFn)
+    Runtime.getRuntime().addShutdownHook(Thread {
+        ingestAgent.close()
+        log.info("IngestAgent HTTP client closed")
+    })
     val lintAgent = LintAgent(knowledgeStore, knowledgeLlmFn)
     val knowledgeTool = KnowledgeTool(knowledgeStore, sourceTracker)
     log.info("Knowledge base initialized: dir=.wiki/knowledge/, chromaFn={}", if (knowledgeChromaFn != null) "enabled" else "disabled")

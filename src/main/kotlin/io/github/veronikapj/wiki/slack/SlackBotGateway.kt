@@ -43,6 +43,7 @@ class SlackBotGateway(
     )
 
     private val toolDisplayNames = mapOf(
+        "knowledgeSearch" to "지식베이스",
         "confluenceSearch" to "Confluence",
         "githubWikiSearch" to "GitHub Wiki",
         "vectorSearch" to "RAG",

@@ -14,6 +14,8 @@ class KnowledgeStore(private val baseDir: String = ".wiki/knowledge") {
 
     fun savePage(relativePath: String, content: String) = lock.withLock {
         val file = File("$baseDir/$relativePath")
+        val root = File(baseDir).canonicalFile
+        require(file.canonicalFile.startsWith(root)) { "Path traversal rejected: $relativePath" }
         file.parentFile?.mkdirs()
         file.writeText(content)
     }
@@ -45,7 +47,10 @@ class KnowledgeStore(private val baseDir: String = ".wiki/knowledge") {
     }
 
     fun pageExists(relativePath: String): Boolean = lock.withLock {
-        File("$baseDir/$relativePath").exists()
+        val file = File("$baseDir/$relativePath")
+        val root = File(baseDir).canonicalFile
+        if (!file.canonicalFile.startsWith(root)) return@withLock false
+        file.exists()
     }
 
     fun incrementAndGetIngestCount(): Int = ingestCount.incrementAndGet()

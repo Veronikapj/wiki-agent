@@ -93,7 +93,7 @@ class IngestAgent(
     // LLM 출력 파싱: "PAGES:\npath/to/file.md:\n# 내용\n---\n" 형식
     private fun parsePagesFromLlmOutput(output: String): List<Pair<String, String>> {
         val result = mutableListOf<Pair<String, String>>()
-        val pageRegex = Regex("""((?:concepts|entities|sources)/[^\n:]+\.md):\s*\n([\s\S]*?)(?=(?:concepts|entities|sources)/[^\n:]+\.md:|$)""")
+        val pageRegex = Regex("""((?:concepts|entities|sources)/[^/\n:]+\.md):\s*\n([\s\S]*?)(?=(?:concepts|entities|sources)/[^\n:]+\.md:|$)""")
         pageRegex.findAll(output).forEach { match ->
             val path = match.groupValues[1].trim()
             val content = match.groupValues[2].replace(Regex("^---\\s*$", RegexOption.MULTILINE), "").trim()
