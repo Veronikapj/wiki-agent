@@ -264,6 +264,8 @@ class SlackBotGateway(
                         }
                     }
                     DmInputType.LONG_TEXT -> {
+                        // ingestText()는 /wiki ingest 커맨드 또는 향후 확인 흐름에서 사용 예정
+                        // 현재는 URL 기반 ingest 안내만 제공
                         slackClient.chatPostMessage {
                             it.channel(channel).text("긴 텍스트를 감지했습니다. `/wiki ingest <URL>` 명령어로 URL을 지식베이스에 저장할 수 있습니다.")
                         }

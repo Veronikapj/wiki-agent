@@ -97,7 +97,7 @@ class IngestAgent(
         pageRegex.findAll(output).forEach { match ->
             val path = match.groupValues[1].trim()
             val content = match.groupValues[2].replace(Regex("^---\\s*$", RegexOption.MULTILINE), "").trim()
-            if (path.isNotBlank() && content.isNotBlank()) {
+            if (path.isNotBlank() && content.isNotBlank() && !path.contains("..") && !path.startsWith("/")) {
                 result += path to content
             }
         }

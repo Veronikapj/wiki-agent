@@ -20,7 +20,7 @@ class LintAgentTest {
 
     @Test fun `lint returns no issues when store is empty`() = runBlocking {
         val result = agent.lint()
-        assertTrue(result.contains("이슈") || result.contains("없음"))
+        assertTrue(result.contains("비어있습니다") || result.contains("없음"))
         coVerify(exactly = 0) { llmFn(any()) }
     }
 

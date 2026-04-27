@@ -62,6 +62,9 @@ class SlackConfigHandler(
     }
 
     private fun triggerIngest(url: String): String {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return "유효하지 않은 URL입니다. http:// 또는 https://로 시작해야 합니다."
+        }
         val fn = onIngest ?: return "Ingest 기능이 비활성화 상태입니다."
         asyncExecutor.execute {
             runCatching { runBlocking { fn(url) } }

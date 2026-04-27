@@ -16,7 +16,10 @@ class IngestAgentTest {
     private val chromaIndexFn: (suspend (String, String, String) -> Unit)? = null
     private val agent = IngestAgent(store, llmFn, chromaIndexFn)
 
-    @AfterEach fun cleanup() { File(baseDir).deleteRecursively() }
+    @AfterEach fun cleanup() {
+        agent.close()
+        File(baseDir).deleteRecursively()
+    }
 
     @Test fun `ingest text compiles and saves concept page`() = runBlocking {
         coEvery { llmFn(any()) } returns """

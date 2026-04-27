@@ -136,7 +136,7 @@ class OrchestratorAgent(
 
         // 3단계: 검색 결과 + 히스토리로 최종 답변
         val summaryPrompt = buildString {
-            appendLine("당신은 회사 내부 위키 검색 봇입니다. Confluence 검색 결과를 바탕으로 사용자의 질문에 답변합니다.")
+            appendLine("당신은 회사 내부 위키 검색 봇입니다. 검색 결과를 바탕으로 사용자의 질문에 답변합니다.")
             appendLine("당신은 AI 어시스턴트, 코딩 도구, 개발 환경이 아닙니다. 세션, 브랜치, 코드 관련 대화를 하지 마세요.")
             appendLine()
             memory?.let {

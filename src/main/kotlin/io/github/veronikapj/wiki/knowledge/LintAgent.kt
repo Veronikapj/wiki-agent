@@ -8,7 +8,7 @@ class LintAgent(
 ) {
     suspend fun lint(): String {
         val pages = store.loadAll()
-        if (pages.isEmpty()) return "이슈 없음 (지식베이스가 비어있습니다)"
+        if (pages.isEmpty()) return "지식베이스가 비어있습니다. `/wiki ingest <URL>`로 내용을 추가한 후 다시 시도하세요."
 
         log.info("Linting {} knowledge pages", pages.size)
 
