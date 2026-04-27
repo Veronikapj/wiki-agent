@@ -9,6 +9,7 @@ import io.github.veronikapj.wiki.agent.SearchProgressListener
 import io.github.veronikapj.wiki.config.SlackConfig
 import io.github.veronikapj.wiki.confluence.ConfluenceClient
 import io.github.veronikapj.wiki.context.ProjectMemory
+import io.github.veronikapj.wiki.knowledge.IngestAgent
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -32,7 +33,7 @@ class SlackBotGateway(
     private val configHandler: SlackConfigHandler,
     private val projectMemory: ProjectMemory? = null,
     private val confluenceClient: ConfluenceClient? = null,
-    private val ingestAgent: io.github.veronikapj.wiki.knowledge.IngestAgent? = null,
+    private val ingestAgent: IngestAgent? = null,
 ) {
     private val app = App()
     private val slackClient: MethodsClient = Slack.getInstance().methods(slackConfig.botToken)
