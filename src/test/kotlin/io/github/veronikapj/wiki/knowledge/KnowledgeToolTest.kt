@@ -24,6 +24,12 @@ class KnowledgeToolTest {
         assertTrue(result.contains("찾을 수 없습니다") || result.contains("없습니다"))
     }
 
+    @Test fun `knowledgeSearch returns not-found message when no pages match`() {
+        store.savePage("concepts/배포-프로세스.md", "# 배포 프로세스\n내용입니다.")
+        val result = tool.knowledgeSearch("없는키워드xyz")
+        assertTrue(result.contains("찾을 수 없습니다") || result.contains("없습니다"))
+    }
+
     @Test fun `knowledgeSearch is case-insensitive for english terms`() {
         store.savePage("concepts/ci-cd.md", "# CI/CD\nGitHub Actions 사용")
         val result = tool.knowledgeSearch("ci")
